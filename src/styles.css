@@ -1,0 +1,364 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-hover: var(--accent-hover);
+  --color-line: var(--line);
+  --shadow-elev: var(--elev);
+  --shadow-elev-hover: var(--elev-hover);
+  --radius-card: 1.25rem;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f3ece3;
+  --fg: #1c1612;
+  --muted: #6d6158;
+  --surface: #fffaf4;
+  --accent: #9a3f28;
+  --accent-fg: #fff8f3;
+  --accent-hover: #823422;
+  --line: #e6d9cc;
+  --elev:
+    0 0 0 1px rgb(28 22 18 / 0.06),
+    0 1px 2px -1px rgb(28 22 18 / 0.06),
+    0 8px 20px -12px rgb(28 22 18 / 0.18);
+  --elev-hover:
+    0 0 0 1px rgb(28 22 18 / 0.1),
+    0 10px 24px -14px rgb(154 63 40 / 0.35);
+  --sky: #8aa4b2;
+  --ground: #243238;
+  --pane: #f3e6d2;
+  --orb: #f7f1e7;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #14110f;
+  --fg: #f6efe7;
+  --muted: #b6a698;
+  --surface: #221c19;
+  --accent: #e39a74;
+  --accent-fg: #1c120e;
+  --accent-hover: #f0b08a;
+  --line: #3a322c;
+  --elev: 0 0 0 1px rgb(255 248 243 / 0.08);
+  --elev-hover: 0 0 0 1px rgb(227 154 116 / 0.45);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
+  background-image: radial-gradient(rgb(28 22 18 / 0.18) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+  mix-blend-mode: multiply;
+}
+
+.dark .grain {
+  opacity: 0.22;
+  mix-blend-mode: screen;
+  background-image: radial-gradient(rgb(246 239 231 / 0.2) 0.6px, transparent 0.6px);
+}
+
+.mark {
+  position: fixed;
+  z-index: 0;
+  top: 50%;
+  left: 1.5rem;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  line-height: 1;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+  color: color-mix(in oklab, var(--fg) 42%, transparent);
+  user-select: none;
+  pointer-events: none;
+}
+
+.stage {
+  position: relative;
+  z-index: 1;
+}
+
+.link-card {
+  box-shadow: var(--elev);
+  background: var(--surface);
+  color: var(--fg);
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+.link-card:hover {
+  box-shadow: var(--elev-hover);
+  transform: translateY(-2px);
+}
+
+.link-card:hover .nudge {
+  transform: translateX(4px);
+}
+
+.link-card:active {
+  transform: scale(0.98);
+}
+
+.link-feature {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.link-feature:hover {
+  background: var(--accent-hover);
+}
+
+.nudge {
+  transition: transform 200ms ease;
+}
+
+.social {
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease;
+  box-shadow: var(--elev);
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.social:hover {
+  transform: translateY(-2px);
+  color: var(--accent);
+  box-shadow: var(--elev-hover);
+}
+
+.social:active {
+  transform: scale(0.96);
+}
+
+.icon-swap {
+  transition:
+    opacity 300ms cubic-bezier(0.2, 0, 0, 1),
+    transform 300ms cubic-bezier(0.2, 0, 0, 1),
+    scale 300ms cubic-bezier(0.2, 0, 0, 1),
+    filter 300ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.rise {
+  animation: rise 560ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.d1 { animation-delay: 40ms; }
+.d2 { animation-delay: 110ms; }
+.d3 { animation-delay: 180ms; }
+.d4 { animation-delay: 250ms; }
+.d5 { animation-delay: 320ms; }
+.d6 { animation-delay: 390ms; }
+.d7 { animation-delay: 460ms; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  border-radius: 1.15rem;
+  background: var(--sky);
+  box-shadow: var(--elev);
+}
+
+.frame .horizon,
+.frame .window,
+.frame .sun {
+  position: absolute;
+}
+
+.frame .horizon {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: var(--ground);
+}
+
+.frame .window {
+  top: 16%;
+  left: 14%;
+  width: 38%;
+  height: 34%;
+  border-radius: 2px;
+  background: var(--pane);
+}
+
+.frame .sun {
+  top: 18%;
+  right: 16%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: var(--orb);
+}
+
+.tone-salt {
+  --sky: #e7d7c4;
+  --ground: #c9b49a;
+  --pane: #fffaf4;
+  --orb: #f4e7d4;
+}
+
+.tone-rain {
+  --sky: #7f97a6;
+  --ground: #243238;
+  --pane: #d9e3e4;
+  --orb: #e7eef0;
+}
+
+.tone-rain .sun {
+  opacity: 0.35;
+}
+
+.tone-tea {
+  --sky: #c9845a;
+  --ground: #3d291c;
+  --pane: #f6e1c4;
+  --orb: #f3d7a2;
+}
+
+.tone-dawn {
+  --sky: #e7cbb8;
+  --ground: #8e5b62;
+  --pane: #fff6ee;
+  --orb: #f6efe4;
+}
+
+.tone-dawn .sun {
+  width: 34%;
+  top: 12%;
+}
+
+.tone-train {
+  --sky: #1d242c;
+  --ground: #0e1216;
+  --pane: #d7c3a4;
+  --orb: #f0e2c8;
+}
+
+.tone-train .horizon {
+  height: 46%;
+}
+
+.tone-train .window {
+  width: 18%;
+  height: 22%;
+  top: 22%;
+}
+
+.tone-rooms {
+  --sky: #2a2420;
+  --ground: #161210;
+  --pane: #f4e2c8;
+  --orb: #e7b089;
+}
+
+.tone-rooms .window {
+  width: 46%;
+  height: 48%;
+  left: 27%;
+  top: 12%;
+}
+
+.tone-rooms .sun {
+  opacity: 0;
+}
+
+.portrait {
+  object-position: center 55%;
+  outline: 1px solid rgb(28 22 18 / 0.12);
+  outline-offset: -1px;
+}
+
+.dark .portrait {
+  outline-color: rgb(255 248 243 / 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .link-card,
+  .social,
+  .nudge,
+  .icon-swap {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .link-card:hover,
+  .link-card:active,
+  .social:hover,
+  .social:active {
+    transform: none;
+  }
+}

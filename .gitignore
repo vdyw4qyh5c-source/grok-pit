@@ -1,0 +1,15 @@
+node_modules/
+.output/
+.vercel/
+.nitro/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+screenshots/
+.grok/preview.pid
+.grok/preview.log
+.grok/og-pending
+.deploy.lock

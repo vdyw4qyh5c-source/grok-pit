@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @font-face {
+      font-family: "Display";
+      font-style: italic;
+      font-weight: 500;
+      src: url("fonts/cormorant-italic-500-cyr.woff2") format("woff2");
+      unicode-range: U+0400-04FF, U+0500-052F, U+2116;
+    }
+    @font-face {
+      font-family: "Display";
+      font-style: italic;
+      font-weight: 500;
+      src: url("fonts/cormorant-italic-500-lat.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+2215;
+    }
+    @font-face {
+      font-family: "Sans";
+      font-style: normal;
+      font-weight: 500 700;
+      src: url("fonts/manrope-normal-500-cyr.woff2") format("woff2");
+      unicode-range: U+0400-04FF, U+0500-052F, U+2116;
+    }
+    @font-face {
+      font-family: "Sans";
+      font-style: normal;
+      font-weight: 500 700;
+      src: url("fonts/manrope-normal-500-lat.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: #F3ECE3;
+      color: #1C1612;
+    }
+
+    .card {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      background:
+        radial-gradient(900px 480px at 18% 110%, rgb(154 63 40 / 0.09), transparent 60%),
+        #F3ECE3;
+    }
+
+    .grain {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.4;
+      background-image: radial-gradient(rgb(28 22 18 / 0.16) 0.55px, transparent 0.55px);
+      background-size: 3px 3px;
+      mix-blend-mode: multiply;
+    }
+
+    .mark {
+      position: absolute;
+      top: 50%;
+      left: 28px;
+      transform: translateY(-50%);
+      font-family: "Sans", sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.42em;
+      line-height: 1;
+      writing-mode: vertical-rl;
+      color: rgb(28 22 18 / 0.42);
+    }
+
+    .copy {
+      position: absolute;
+      left: 78px;
+      top: 0;
+      bottom: 0;
+      width: 590px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .eyebrow {
+      font-family: "Sans", sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #9A3F28;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-family: "Display", serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 108px;
+      line-height: 0.84;
+      letter-spacing: -0.03em;
+      color: #1C1612;
+    }
+
+    h1 span {
+      display: block;
+    }
+
+    .rule {
+      width: 72px;
+      height: 2px;
+      margin: 26px 0 22px;
+      background: #9A3F28;
+      border: 0;
+    }
+
+    .name {
+      font-family: "Sans", sans-serif;
+      font-weight: 650;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      color: #1C1612;
+    }
+
+    .role {
+      margin-top: 8px;
+      font-family: "Sans", sans-serif;
+      font-weight: 500;
+      font-size: 20px;
+      letter-spacing: -0.01em;
+      color: #6d6158;
+    }
+
+    .place {
+      margin-top: 22px;
+      font-family: "Sans", sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #1C1612;
+    }
+
+    .photo {
+      position: absolute;
+      top: 28px;
+      right: 28px;
+      width: 452px;
+      height: 574px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #e7ddd2;
+      box-shadow:
+        0 0 0 1px rgb(28 22 18 / 0.1),
+        0 16px 36px -22px rgb(28 22 18 / 0.55);
+    }
+
+    .photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 18%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p class="mark">PITOMNIK</p>
+    <div class="copy">
+      <p class="eyebrow">pitomnikmoscow</p>
+      <h1><span>Питомник</span><span>Москва</span></h1>
+      <hr class="rule" />
+      <p class="name">Сергей Петрович</p>
+      <p class="role">Пудели и дизайнерские породы</p>
+      <p class="place">Андреевка · Солнечногорск</p>
+    </div>
+    <div class="photo">
+      <img src="file:///workspace/public/portrait.jpg" alt="" />
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+  </div>
+</body>
+</html>
