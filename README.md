@@ -40,15 +40,7 @@ git push -u origin main
 
 ### Node 22 на сервере
 
-TanStack Start не собирается на Node 20. Системный Node других проектов не трогаем — ставим 22 через nvm:
-
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-source ~/.nvm/nvm.sh
-nvm install 22
-```
-
-Скрипт сам ищет `~/.nvm/versions/node/v22*` и подставляет его в PATH. Системный Node 20 не трогает.
+TanStack Start не собирается на системном Node 20. Скрипт сам качает официальный Node 22 в `/usr/local/lib/node-v22` и не подменяет `/usr/bin/node` у других проектов. nvm не нужен.
 
 ### HTTPS, если DNS направили позже
 

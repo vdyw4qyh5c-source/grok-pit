@@ -48,37 +48,24 @@ done
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
 
-# nvm.sh is not compatible with `set -u`; disable it while sourcing.
-load_nvm() {
-  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-  set +u
-  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$NVM_DIR/nvm.sh"
-    set -u
-    return 0
+node22_home() {
+  if [[ -n "${NODE22_HOME:-}" ]]; then
+    echo "$NODE22_HOME"
+  elif [[ "$(id -u)" -eq 0 ]]; then
+    echo /usr/local/lib/node-v22
+  else
+    echo "$HOME/.local/node-v22"
   fi
-  if [[ -s /root/.nvm/nvm.sh ]]; then
-    export NVM_DIR="/root/.nvm"
-    # shellcheck disable=SC1091
-    source "$NVM_DIR/nvm.sh"
-    set -u
-    return 0
-  fi
-  if [[ -s /usr/local/nvm/nvm.sh ]]; then
-    # shellcheck disable=SC1091
-    source /usr/local/nvm/nvm.sh
-    set -u
-    return 0
-  fi
-  set -u
-  return 1
 }
 
-# Prefer an already-installed Node 22 binary so we don't depend on `nvm` being a
-# visible command in a non-interactive shell.
+# Already-installed Node 22, without touching the system Node 20 used by other apps.
 prefer_node22_bin() {
-  local bin dir
+  local bin dir home
+  home="$(node22_home)"
+  if [[ -x "$home/bin/node" ]]; then
+    export PATH="$home/bin:$PATH"
+    return 0
+  fi
   for dir in \
     "$HOME/.nvm/versions/node" \
     /root/.nvm/versions/node \
@@ -95,32 +82,63 @@ prefer_node22_bin() {
   return 1
 }
 
+node_cpu() {
+  case "$(uname -m)" in
+    x86_64) echo x64 ;;
+    aarch64|arm64) echo arm64 ;;
+    *) die "неизвестная архитектура $(uname -m) — нужен linux x64 или arm64" ;;
+  esac
+}
+
+# Official tarball into NODE22_HOME. Leaves /usr/bin/node (v20) alone.
+install_standalone_node22() {
+  local dest arch version url tmp extracted
+  dest="$(node22_home)"
+  if [[ -x "$dest/bin/node" ]]; then
+    export PATH="$dest/bin:$PATH"
+    return 0
+  fi
+  command -v curl >/dev/null || die "нужен curl, чтобы скачать Node 22"
+  command -v tar >/dev/null || die "нужен tar"
+
+  arch="$(node_cpu)"
+  log "Node 22 нет — качаю официальный бинарник в ${dest} (системный $(command -v node 2>/dev/null || echo node) не трогаю)"
+  version="$(curl -fsSL https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt \
+    | sed -n "s/.*node-v\\([0-9.]*\\)-linux-${arch}\\.tar\\.xz/\\1/p" \
+    | head -n 1)"
+  [[ -n "$version" ]] || die "не удалось узнать последнюю Node 22 с nodejs.org"
+  url="https://nodejs.org/dist/v${version}/node-v${version}-linux-${arch}.tar.xz"
+  tmp="$(mktemp -d)"
+  curl -fL "$url" -o "$tmp/node.tar.xz"
+  tar -xJf "$tmp/node.tar.xz" -C "$tmp"
+  extracted="$(find "$tmp" -maxdepth 1 -type d -name "node-v22*-linux-${arch}" | head -n 1)"
+  [[ -n "$extracted" && -d "$extracted" ]] || die "архив Node 22 распаковался не туда"
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest"
+  mv "$extracted" "$dest"
+  rm -rf "$tmp"
+  [[ -x "$dest/bin/node" ]] || die "после установки нет $dest/bin/node"
+  export PATH="$dest/bin:$PATH"
+  log "поставил $($dest/bin/node -v) → $dest/bin/node"
+}
+
 node_major() {
   node -p "process.versions.node.split('.')[0]"
 }
 
-# TanStack Start needs >=22.12. Prefer nvm so other apps on Node 20 stay untouched.
 load_node() {
   export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin:$PATH"
+  prefer_node22_bin || install_standalone_node22
   prefer_node22_bin || true
-  load_nvm || true
 
-  if type nvm >/dev/null 2>&1; then
-    set +u
-    nvm use 22 >/dev/null 2>&1 || nvm install 22
-    nvm use 22 >/dev/null 2>&1 || true
-    set -u
-    prefer_node22_bin || true
-  fi
-
-  command -v node >/dev/null || die "node не найден. Поставь Node 22: nvm install 22"
+  command -v node >/dev/null || die "node не найден даже после установки Node 22"
   command -v npm >/dev/null || die "npm не найден."
   command -v pm2 >/dev/null || die "pm2 не найден. На этом сервере он уже должен быть в PATH."
 
   local major
   major="$(node_major)"
   if (( major < 22 )); then
-    die "нужен Node 22.12+ (сейчас $(node -v)). Сначала: source ~/.nvm/nvm.sh && nvm install 22"
+    die "в PATH всё ещё $(node -v) из $(command -v node). Должен быть ${NODE22_HOME:-/usr/local/lib/node-v22}/bin/node"
   fi
   export NODE_BIN
   NODE_BIN="$(command -v node)"
