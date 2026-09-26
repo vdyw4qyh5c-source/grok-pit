@@ -24,7 +24,7 @@ module.exports = {
       name: cfg.APP_NAME || "sergeybondarenko",
       cwd: __dirname,
       script: ".output/server/index.mjs",
-      interpreter: "node",
+      interpreter: process.env.NODE_BIN || "node",
       instances: 1,
       exec_mode: "fork",
       autorestart: true,

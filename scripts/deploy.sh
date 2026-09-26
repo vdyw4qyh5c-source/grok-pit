@@ -45,18 +45,48 @@ done
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
 
-load_node() {
-  export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin:$PATH"
-  if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+load_nvm() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     # shellcheck disable=SC1091
-    source "$HOME/.nvm/nvm.sh"
-  elif [[ -s /usr/local/nvm/nvm.sh ]]; then
+    source "$NVM_DIR/nvm.sh"
+    return 0
+  fi
+  if [[ -s /usr/local/nvm/nvm.sh ]]; then
     # shellcheck disable=SC1091
     source /usr/local/nvm/nvm.sh
+    return 0
   fi
-  command -v node >/dev/null || die "node не найден. Поставь Node 22 рядом с остальными проектами."
+  return 1
+}
+
+node_major() {
+  node -p "process.versions.node.split('.')[0]"
+}
+
+# TanStack Start needs >=22.12. Prefer nvm so other apps on Node 20 stay untouched.
+load_node() {
+  export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin:$PATH"
+  load_nvm || true
+
+  if command -v nvm >/dev/null 2>&1; then
+    if nvm use 22 >/dev/null 2>&1 || nvm install 22; then
+      nvm use 22 >/dev/null
+    fi
+  fi
+
+  command -v node >/dev/null || die "node не найден. Поставь Node 22: nvm install 22"
   command -v npm >/dev/null || die "npm не найден."
   command -v pm2 >/dev/null || die "pm2 не найден. На этом сервере он уже должен быть в PATH."
+
+  local major
+  major="$(node_major)"
+  if (( major < 22 )); then
+    die "нужен Node 22.12+ (сейчас $(node -v)). Другие проекты не трогаем — поставь отдельно: nvm install 22 && nvm use 22"
+  fi
+  export NODE_BIN
+  NODE_BIN="$(command -v node)"
+  log "node $($NODE_BIN -v) ($NODE_BIN)"
 }
 
 with_lock() {
@@ -195,14 +225,17 @@ ensure_pm2() {
   pm2 save
 }
 
-build_app() {
-  local major
-  major="$(node -p "process.versions.node.split('.')[0]")"
-  if (( major < 20 )); then
-    die "нужен Node 20+ (лучше 22). Сейчас: $(node -v)"
+install_deps() {
+  if npm ci; then
+    return 0
   fi
-  log "npm ci + сборка (NITRO_PRESET=${NITRO_PRESET})"
-  npm ci
+  log "npm ci не сошёлся с lock — ставлю через npm install"
+  npm install --no-audit --no-fund
+}
+
+build_app() {
+  log "зависимости + сборка (NITRO_PRESET=${NITRO_PRESET})"
+  install_deps
   if ! NITRO_PRESET="$NITRO_PRESET" npm run build:vps || ! build_exists; then
     log "повтор сборки с NITRO_PRESET=node_server (Nitro 3)"
     NITRO_PRESET=node_server npm run build:vps
