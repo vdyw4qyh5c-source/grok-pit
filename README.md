@@ -48,7 +48,21 @@ source ~/.nvm/nvm.sh
 nvm install 22
 ```
 
-Скрипт деплоя сам сделает `nvm use 22` (и поставит 22, если nvm уже есть).
+Скрипт сам ищет `~/.nvm/versions/node/v22*` и подставляет его в PATH. Системный Node 20 не трогает.
+
+### HTTPS, если DNS направили позже
+
+Сертификат можно выпустить отдельно, Node для этого не нужен:
+
+```bash
+certbot --nginx -d sergeybondarenko.pro -d www.sergeybondarenko.pro
+```
+
+Или после обновления скрипта:
+
+```bash
+./scripts/deploy.sh --ssl
+```
 
 ### Один раз на сервере
 

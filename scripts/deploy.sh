@@ -3,6 +3,7 @@
 #
 #   ./scripts/deploy.sh              check git, update if origin moved, first-run setup
 #   ./scripts/deploy.sh --force      rebuild + restart even when git is unchanged
+#   ./scripts/deploy.sh --ssl        только сертификат (когда DNS уже смотрит сюда)
 #   ./scripts/deploy.sh --install-cron
 #
 # Safe around other sites: binds 127.0.0.1:38471 only, nginx server_name is
@@ -27,9 +28,11 @@ LOCK_FILE="${LOCK_FILE:-/tmp/${APP_NAME}.deploy.lock}"
 
 FORCE=0
 INSTALL_CRON=0
+SSL_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --force) FORCE=1 ;;
+    --ssl) SSL_ONLY=1 ;;
     --install-cron) INSTALL_CRON=1 ;;
     -h|--help)
       sed -n '2,12p' "$0"
@@ -45,18 +48,50 @@ done
 log() { printf '[deploy] %s\n' "$*"; }
 die() { printf '[deploy] ERROR: %s\n' "$*" >&2; exit 1; }
 
+# nvm.sh is not compatible with `set -u`; disable it while sourcing.
 load_nvm() {
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  set +u
   if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     # shellcheck disable=SC1091
     source "$NVM_DIR/nvm.sh"
+    set -u
+    return 0
+  fi
+  if [[ -s /root/.nvm/nvm.sh ]]; then
+    export NVM_DIR="/root/.nvm"
+    # shellcheck disable=SC1091
+    source "$NVM_DIR/nvm.sh"
+    set -u
     return 0
   fi
   if [[ -s /usr/local/nvm/nvm.sh ]]; then
     # shellcheck disable=SC1091
     source /usr/local/nvm/nvm.sh
+    set -u
     return 0
   fi
+  set -u
+  return 1
+}
+
+# Prefer an already-installed Node 22 binary so we don't depend on `nvm` being a
+# visible command in a non-interactive shell.
+prefer_node22_bin() {
+  local bin dir
+  for dir in \
+    "$HOME/.nvm/versions/node" \
+    /root/.nvm/versions/node \
+    "${NVM_DIR:-}/versions/node" \
+    /usr/local/n/versions/node
+  do
+    [[ -d "$dir" ]] || continue
+    bin="$(ls -1d "$dir"/v22.*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
+    if [[ -n "${bin:-}" && -x "$bin/node" ]]; then
+      export PATH="$bin:$PATH"
+      return 0
+    fi
+  done
   return 1
 }
 
@@ -67,12 +102,15 @@ node_major() {
 # TanStack Start needs >=22.12. Prefer nvm so other apps on Node 20 stay untouched.
 load_node() {
   export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin:$PATH"
+  prefer_node22_bin || true
   load_nvm || true
 
-  if command -v nvm >/dev/null 2>&1; then
-    if nvm use 22 >/dev/null 2>&1 || nvm install 22; then
-      nvm use 22 >/dev/null
-    fi
+  if type nvm >/dev/null 2>&1; then
+    set +u
+    nvm use 22 >/dev/null 2>&1 || nvm install 22
+    nvm use 22 >/dev/null 2>&1 || true
+    set -u
+    prefer_node22_bin || true
   fi
 
   command -v node >/dev/null || die "node не найден. Поставь Node 22: nvm install 22"
@@ -82,7 +120,7 @@ load_node() {
   local major
   major="$(node_major)"
   if (( major < 22 )); then
-    die "нужен Node 22.12+ (сейчас $(node -v)). Другие проекты не трогаем — поставь отдельно: nvm install 22 && nvm use 22"
+    die "нужен Node 22.12+ (сейчас $(node -v)). Сначала: source ~/.nvm/nvm.sh && nvm install 22"
   fi
   export NODE_BIN
   NODE_BIN="$(command -v node)"
@@ -194,23 +232,40 @@ ensure_nginx() {
     as_root nginx -s reload
   fi
   log "nginx смотрит ${DOMAIN} на это приложение"
+  issue_ssl || true
+}
 
-  if command -v certbot >/dev/null; then
-    log "пробую выпустить HTTPS через certbot"
-    as_root certbot --nginx \
+ssl_ready() {
+  command -v nginx >/dev/null || return 1
+  [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]
+}
+
+issue_ssl() {
+  if ssl_ready; then
+    log "сертификат для ${DOMAIN} уже есть"
+    return 0
+  fi
+  command -v certbot >/dev/null || die "certbot не найден. Поставь: apt install certbot python3-certbot-nginx"
+  nginx_configured || die "сначала нужен nginx для ${DOMAIN} — запусти ./scripts/deploy.sh без флагов"
+
+  log "выпускаю HTTPS для ${DOMAIN}"
+  if as_root certbot --nginx \
       -d "$DOMAIN" -d "www.${DOMAIN}" \
       --non-interactive --agree-tos \
       --register-unsafely-without-email \
-      --redirect \
-      || as_root certbot --nginx \
-        -d "$DOMAIN" \
-        --non-interactive --agree-tos \
-        --register-unsafely-without-email \
-        --redirect \
-      || log "certbot не выдал сертификат (часто DNS ещё не смотрит сюда). HTTP уже работает. Позже: sudo certbot --nginx -d ${DOMAIN}"
-  else
-    log "certbot нет — сайт на HTTP. Потом: sudo certbot --nginx -d ${DOMAIN}"
+      --redirect; then
+    log "HTTPS готов: https://${DOMAIN}"
+    return 0
   fi
+  if as_root certbot --nginx \
+      -d "$DOMAIN" \
+      --non-interactive --agree-tos \
+      --register-unsafely-without-email \
+      --redirect; then
+    log "HTTPS готов: https://${DOMAIN} (www не указан в DNS — это нормально)"
+    return 0
+  fi
+  die "certbot не выдал сертификат. Проверь, что A-запись ${DOMAIN} смотрит на этот сервер: dig +short ${DOMAIN}"
 }
 
 ensure_pm2() {
@@ -273,6 +328,11 @@ install_cron() {
 }
 
 main() {
+  if (( SSL_ONLY )); then
+    issue_ssl
+    return 0
+  fi
+
   load_node
   with_lock
 
